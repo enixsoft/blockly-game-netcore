@@ -13,11 +13,16 @@
     <link href="https://fonts.googleapis.com/css?family=Catamaran:100,200,300,400,500,600,700,800,900" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Muli" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.css" />
-    <link rel="stylesheet" href="http://localhost:3000/app.css">
+    <environment names="Development">
+        <link rel="stylesheet" type="text/css" href="http://localhost:3000/app.css"/>
+    </environment>
+    <environment names="Production">
+        <link rel="stylesheet" type="text/css" asp-href-include="dist/app.*.css" />
+    </environment>
 </head>
 <body id="page-top">
     <div id="app">
-        <App :user="{}"
+        <App :user="null"
              :errors="{}"
              :old="{}"
              :lang="{}"
@@ -26,9 +31,13 @@
              :game-data="[]"
              base-url="http://localhost:5000/" />
     </div>
-
-    <script src="http://localhost:3000/app.js"></script>
-    <script src='https://www.google.com/recaptcha/api.js'></script>
+    <environment names="Development">
+        <script src="http://localhost:3000/app.js"></script>
+    </environment>
+    <environment names="Production">
+        <script asp-src-include="dist/app.*.bundle.js"></script>
+    </environment>
+    <script src="https://www.google.com/recaptcha/api.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.js"></script>
     <script>
    window.addEventListener("load", function(){
@@ -48,6 +57,6 @@
          "link": "{{ Lang::get('pagination.cookieslink') }}",
       }
    })});
-   </script>
+    </script>
 </body>
 </html>

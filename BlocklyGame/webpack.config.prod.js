@@ -12,7 +12,7 @@ module.exports = merge(baseConfig, {
     devtool: 'cheap-module-source-map', 
     output: {
         filename: '[name].[contentHash].bundle.js',
-        path: path.resolve(__dirname, "dist")
+        path: path.resolve(__dirname, "wwwroot/dist")
     },
     optimization: {
         minimizer: [
@@ -29,10 +29,19 @@ module.exports = merge(baseConfig, {
                 test: /\.scss$/,
                 use: [
                     MiniCssExtractPlugin.loader, 
-                    "css-loader",   
+                    "css-loader",
+                    'resolve-url-loader',  
                     "sass-loader"  
                 ]
             },
+            {
+                test: /\.(png|jpg|jpeg|svg|woff|woff2|ttf|eot|ico)$/,
+                loader: 'url-loader',
+                options: {
+                  name: '[name].[ext]?[hash]',
+                  limit: 10000,
+                },
+              }
         ]
     }
 });

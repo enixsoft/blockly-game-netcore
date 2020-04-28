@@ -1,14 +1,16 @@
 const webpack = require('webpack');
 const path = require('path');
 const VueLoaderPlugin = require('vue-loader/lib/plugin');
-const CopyWebpackPlugin = require('copy-webpack-plugin');
-
-const fontAwesome = 'node_modules/@fortawesome/fontawesome-free/webfonts';
-const simpleLineIcons = 'node_modules/simple-line-icons/fonts';
 
 module.exports = {
-  target: 'web',
+  target: 'web',  
   context: __dirname,
+  entry: {
+    app: [
+      'babel-polyfill',
+      path.resolve(__dirname, 'Assets/js/app.js')
+    ]
+  },
   output: {
     filename: '[name].js',
     path: path.resolve(__dirname, 'Assets/js'),
@@ -46,8 +48,6 @@ module.exports = {
     ]
   },
   plugins: [
-    new VueLoaderPlugin(),
-    new CopyWebpackPlugin([{ from: path.resolve(__dirname, fontAwesome), to: path.resolve(__dirname, 'wwwroot/fonts') }]),
-    new CopyWebpackPlugin([{ from: path.resolve(__dirname, simpleLineIcons), to: path.resolve(__dirname, 'wwwroot/fonts') }]),    
+    new VueLoaderPlugin()  
   ]
 };

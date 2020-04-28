@@ -12,12 +12,6 @@ const DEV_PORT = 3000;
 
 module.exports = merge(baseConfig, {
   mode: 'development',
-  entry: {
-    app: [
-      'babel-polyfill',
-      path.resolve(__dirname, 'Assets/js/app.js')
-    ]
-  },
   output: {
     filename: '[name].js',
     path: path.resolve(__dirname, 'Assets/HMR'),
@@ -58,8 +52,7 @@ module.exports = merge(baseConfig, {
             options: {
               hmr: process.env.NODE_ENV === 'development',
             },
-          },
-
+          },          
           {
               loader: 'css-loader?url=false',
               options: {
