@@ -77,9 +77,9 @@ header.game-header {
 	/*color: white;*/
 	padding-top: 74px;
 	height: 100vh;  
-	background: url("../img/bg-pattern.png"), #7b4397;
-	background: url("../img/bg-pattern.png"), -webkit-gradient(linear, right top, left top, from(#7b4397), to(#dc2430));
-	background: url("../img/bg-pattern.png"), linear-gradient(to left, #7b4397, #dc2430);
+	background: url($bg-img), #7b4397;
+	background: url($bg-img), -webkit-gradient(linear, right top, left top, from(#7b4397), to(#dc2430));
+	background: url($bg-img), linear-gradient(to left, #7b4397, #dc2430);
 }
 
 

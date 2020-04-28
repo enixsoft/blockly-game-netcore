@@ -11,9 +11,9 @@ header.masthead {
     padding-bottom: 0;
 
     color: white;
-    background: url('../img/bg-pattern.png'), $theme-secondary;
-    background: url('../img/bg-pattern.png'), -webkit-linear-gradient(to left, $theme-secondary, $theme-tertiary);
-    background: url('../img/bg-pattern.png'), linear-gradient(to left, $theme-secondary, $theme-tertiary);
+    background: url($bg-img), $theme-secondary;
+    background: url($bg-img), -webkit-linear-gradient(to left, $theme-secondary, $theme-tertiary);
+    background: url($bg-img), linear-gradient(to left, $theme-secondary, $theme-tertiary);
     .header-content {
         max-width: 500px;
         margin-bottom: 100px;
