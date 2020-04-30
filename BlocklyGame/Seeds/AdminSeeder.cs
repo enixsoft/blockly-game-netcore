@@ -9,11 +9,11 @@ using System.Threading.Tasks;
 
 public class AdminSeeder
 {
-    private readonly UserManager<User> userManager;
+    private readonly UserManager<ApplicationUser> userManager;
     private readonly RoleManager<IdentityRole> roleManager;
     private readonly ApplicationDbContext context;
 
-    public AdminSeeder(UserManager<User> userManager, RoleManager<IdentityRole> roleManager, ApplicationDbContext context)
+    public AdminSeeder(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, ApplicationDbContext context)
     {      
         this.userManager = userManager;
         this.roleManager = roleManager;
@@ -34,7 +34,7 @@ public class AdminSeeder
 
         if (!context.Users.Any(u => u.UserName == "admin"))
         {
-            await userManager.CreateAsync(new User
+            await userManager.CreateAsync(new ApplicationUser
             {
                 UserName = "admin",
                 Email = "admin@blocklygame.com"

@@ -7,6 +7,10 @@ using BlocklyGame.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Identity;
+using System.Text.Json;
+using Newtonsoft.Json;
 //using BlocklyGame.Models;
 
 namespace BlocklyGame.Controllers
@@ -15,25 +19,31 @@ namespace BlocklyGame.Controllers
     {
         private readonly ILogger<HomeController> _logger;
         private readonly ApplicationDbContext _dbContext;
+        private readonly IAntiforgery _antiforgery;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public HomeController(ILogger<HomeController> logger, ApplicationDbContext dbContext)
+        public HomeController(ILogger<HomeController> logger, ApplicationDbContext dbContext, IAntiforgery antiforgery, UserManager<ApplicationUser> userManager)
         {
             _logger = logger;
             _dbContext = dbContext;
+            _antiforgery = antiforgery;
+            _userManager = userManager;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            bool can = false;
-            try
+            ViewBag.CsrfToken = _antiforgery.GetAndStoreTokens(HttpContext).RequestToken; 
+                                
+            ApplicationUser user = await _userManager.GetUserAsync(HttpContext.User);
+            if (user != null)
             {
-                //db.Database.OpenConnection();     
-                can = _dbContext.Database.CanConnect();
+                List<string> roles = new List<string>(await _userManager.GetRolesAsync(user));
+                ViewBag.User = JsonConvert.SerializeObject(new { username = user.UserName, email = user.Email, role = roles.Contains("Administrator") ? "Administrator" : "User" });
             }
-            catch (Exception ex)
+            else
             {
-                throw ex;
-            }           
+                ViewBag.User = JsonConvert.SerializeObject(null);
+            }      
 
             return View();
         }

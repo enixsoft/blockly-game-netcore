@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace BlocklyGame.Models
 {
-    public class User : IdentityUser
+    public class ApplicationUser : IdentityUser
     {
 
     }

@@ -3,8 +3,8 @@
 <h2 class="section-heading">{{ locales.loginHeading }}</h2>
 <p>{{ locales.loginInfo }}</p>
 <div class="form-group">    
-<form method="POST" id="loginForm" action="login">
-<input type="hidden" name="_token" :value="$global.CsrfToken">
+<form method="POST" id="loginForm" action="account/login">
+<input type="hidden" name="__RequestVerificationToken" :value="$global.CsrfToken">
 <div class="form-group row col-md-6 mx-auto">
     <label for="login-username" class="col-md-12">{{ locales.userName }}:</label>
     <input class="form-control" id="login-username" type="username" name="login-username" :value="oldUsername" required>    

@@ -2,7 +2,7 @@
 <html lang="sk">
 <head>
     <meta charset="utf-8">
-    <meta name="csrf-token" content="123456789">
+    <meta charset="UTF-8" content="@ViewBag.CsrfToken" csrf-param="_csrf_token" method-param="_method" name="csrf-token">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="description" content="">
     <meta name="author" content="">
@@ -14,7 +14,7 @@
     <link href="https://fonts.googleapis.com/css?family=Muli" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.css" />
     <environment names="Development">
-        <link rel="stylesheet" type="text/css" href="http://localhost:3000/app.css"/>
+        <link rel="stylesheet" type="text/css" href="http://localhost:3000/app.css" />
     </environment>
     <environment names="Production">
         <link rel="stylesheet" type="text/css" asp-href-include="dist/app.*.css" />
@@ -22,7 +22,8 @@
 </head>
 <body id="page-top">
     <div id="app">
-        <App :user="null"
+        <App 
+             :user="@ViewBag.User"
              :errors="{}"
              :old="{}"
              :lang="{}"
