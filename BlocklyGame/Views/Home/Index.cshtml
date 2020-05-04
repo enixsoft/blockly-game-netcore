@@ -2,11 +2,11 @@
 <html lang="sk">
 <head>
     <meta charset="utf-8">
-    <meta charset="UTF-8" content="@ViewBag.CsrfToken" csrf-param="_csrf_token" method-param="_method" name="csrf-token">
+    <meta charset="UTF-8" content="@Model.CsrfToken" csrf-param="_csrf_token" method-param="_method" name="csrf-token">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="description" content="">
     <meta name="author" content="">
-    <title>Blockly game</title>
+    <title>@Model.Title</title>
     <link rel="shortcut icon" href="favicon.ico">
     <link rel="icon" type="image/png" href="favicon.png">
     <link href="https://fonts.googleapis.com/css?family=Lato" rel="stylesheet">
@@ -23,13 +23,13 @@
 <body id="page-top">
     <div id="app">
         <App 
-             :user="@ViewBag.User"
-             :errors="{}"
-             :old="{}"
-             :lang="{}"
-             :recaptcha-key="null"
-             :in-game-progress="[]"
-             :game-data="[]"
+             :user="@Model.User"
+             :errors="@Model.Errors"
+             :old="@Model.Old"
+             :lang="@Model.Lang"
+             :recaptcha-key="@Model.RecaptchaKey"
+             :in-game-progress="@Model.InGameProgress"
+             :game-data="@Model.GameData"
              base-url="http://localhost:5000/" />
     </div>
     <environment names="Development">
@@ -53,9 +53,9 @@
       },
       "theme": "classic",
       "content": {
-         "message": "{{ Lang::get('pagination.cookiesmsg') }}",
-         "dismiss": "{{ Lang::get('pagination.cookiesdismiss') }}",
-         "link": "{{ Lang::get('pagination.cookieslink') }}",
+         "message": "@Model.Cookies["msg"]",
+         "dismiss": "@Model.Cookies["dismiss"]",
+         "link": "@Model.Cookies["link"]"
       }
    })});
     </script>

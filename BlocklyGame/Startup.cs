@@ -1,13 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using BlocklyGame.Controllers;
+using BlocklyGame.Managers;
 using BlocklyGame.Models;
+using Localization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,7 +54,7 @@ namespace BlocklyGame
 
                 // User settings.
                 options.User.AllowedUserNameCharacters =
-                "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+                "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
                 options.User.RequireUniqueEmail = false;
             });
 
@@ -67,6 +71,23 @@ namespace BlocklyGame
             //    options.SlidingExpiration = true;
             //});
 
+            services.Configure<RequestLocalizationOptions>(options =>
+            {
+                options.DefaultRequestCulture = new RequestCulture("en-UK");
+                options.SupportedCultures = new List<CultureInfo> { new CultureInfo("en-UK"), new CultureInfo("sk-SK") };
+                options.SupportedUICultures = new List<CultureInfo> { new CultureInfo("en-UK"), new CultureInfo("sk-SK") };
+                options.RequestCultureProviders.Clear();
+                options.RequestCultureProviders.Add(new LocalizationManager());
+            });
+
+            services.AddLocalization(options => options.ResourcesPath = "Resources");
+
+            services.AddMvc()
+                .AddDataAnnotationsLocalization(options => {
+                    options.DataAnnotationLocalizerProvider = (type, factory) =>
+                    factory.Create(typeof(SharedResource));
+                });    
+                        
             services.AddControllersWithViews();
         }
 
@@ -83,8 +104,10 @@ namespace BlocklyGame
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
-            
+
             //app.UseHttpsRedirection();
+
+            app.UseRequestLocalization();
 
             app.UseStaticFiles();
 

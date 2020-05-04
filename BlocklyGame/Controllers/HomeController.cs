@@ -11,6 +11,9 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Identity;
 using System.Text.Json;
 using Newtonsoft.Json;
+using Microsoft.Extensions.Localization;
+using BlocklyGame.Managers;
+using Localization;
 //using BlocklyGame.Models;
 
 namespace BlocklyGame.Controllers
@@ -21,31 +24,42 @@ namespace BlocklyGame.Controllers
         private readonly ApplicationDbContext _dbContext;
         private readonly IAntiforgery _antiforgery;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IStringLocalizer _localizer;
 
-        public HomeController(ILogger<HomeController> logger, ApplicationDbContext dbContext, IAntiforgery antiforgery, UserManager<ApplicationUser> userManager)
+        public HomeController(ILogger<HomeController> logger, ApplicationDbContext dbContext, IAntiforgery antiforgery, UserManager<ApplicationUser> userManager, IStringLocalizer<SharedResource> localizer)
         {
             _logger = logger;
             _dbContext = dbContext;
             _antiforgery = antiforgery;
             _userManager = userManager;
+            _localizer = localizer;
         }
-
+  
         public async Task<IActionResult> Index()
         {
-            ViewBag.CsrfToken = _antiforgery.GetAndStoreTokens(HttpContext).RequestToken; 
-                                
+            IndexModel indexModel = new IndexModel
+            {
+                CsrfToken = _antiforgery.GetAndStoreTokens(HttpContext).RequestToken
+            }; 
+
+            indexModel.Cookies.Add("msg", _localizer["cookies.msg"]);
+            indexModel.Cookies.Add("dismiss", _localizer["cookies.dismiss"]);
+            indexModel.Cookies.Add("link", _localizer["cookies.link"]);
+            indexModel.Title = _localizer["title"];
+
             ApplicationUser user = await _userManager.GetUserAsync(HttpContext.User);
             if (user != null)
             {
                 List<string> roles = new List<string>(await _userManager.GetRolesAsync(user));
-                ViewBag.User = JsonConvert.SerializeObject(new { username = user.UserName, email = user.Email, role = roles.Contains("Administrator") ? "Administrator" : "User" });
-            }
-            else
-            {
-                ViewBag.User = JsonConvert.SerializeObject(null);
-            }      
+                indexModel.User = JsonConvert.SerializeObject(new { username = user.UserName, email = user.Email, role = roles.Contains("Administrator") ? "admin" : "user" });
+            }  
 
-            return View();
+            if (TempData.ContainsKey("errors"))
+            {
+                indexModel.Errors = TempData["errors"].ToString();
+            }
+
+            return View(indexModel);
         }
 
         //public IActionResult Privacy()
