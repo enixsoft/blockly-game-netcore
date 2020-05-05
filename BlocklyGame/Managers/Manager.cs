@@ -1,14 +1,14 @@
-//using BlocklyGame.Models;
-//using Microsoft.AspNetCore.Identity;
-//using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-//using Microsoft.Extensions.DependencyInjection;
-//using System;
-//using System.Collections.Generic;
-//using System.Linq;
-//using System.Threading.Tasks;
+using BlocklyGame.Models;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
-//namespace BlocklyGame.Controllers
-//{
+namespace BlocklyGame.Managers
+{
 //    public class AccountManager
 //    {
 //        private readonly IServiceProvider _serviceProvider;
@@ -53,4 +53,4 @@
 //            }
 //        }
 //    }
-//}
+}

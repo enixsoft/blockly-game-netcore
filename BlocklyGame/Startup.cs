@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using BlocklyGame.Controllers;
+using BlocklyGame.Helpers;
 using BlocklyGame.Managers;
 using BlocklyGame.Models;
 using Localization;
@@ -31,11 +32,16 @@ namespace BlocklyGame
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddHttpClient();
+
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseMySql(Configuration.GetConnectionString("DefaultConnection")));
 
             services.AddIdentity<ApplicationUser, IdentityRole>()
-                .AddEntityFrameworkStores<ApplicationDbContext>();          
+                .AddErrorDescriber<LocalizedIdentityErrorDescriber>()
+                .AddEntityFrameworkStores<ApplicationDbContext>();                  
+          
+            services.Configure<ApplicationSettings>(Configuration.GetSection("AppSettings"));
 
             services.Configure<IdentityOptions>(options =>
             {
@@ -55,7 +61,7 @@ namespace BlocklyGame
                 // User settings.
                 options.User.AllowedUserNameCharacters =
                 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
-                options.User.RequireUniqueEmail = false;
+                options.User.RequireUniqueEmail = true;
             });
 
             services.AddTransient<AdminSeeder>();
@@ -73,11 +79,11 @@ namespace BlocklyGame
 
             services.Configure<RequestLocalizationOptions>(options =>
             {
-                options.DefaultRequestCulture = new RequestCulture("en-UK");
-                options.SupportedCultures = new List<CultureInfo> { new CultureInfo("en-UK"), new CultureInfo("sk-SK") };
-                options.SupportedUICultures = new List<CultureInfo> { new CultureInfo("en-UK"), new CultureInfo("sk-SK") };
+                options.DefaultRequestCulture = new RequestCulture("en");
+                options.SupportedCultures = new List<CultureInfo> { new CultureInfo("en"), new CultureInfo("sk") };
+                options.SupportedUICultures = new List<CultureInfo> { new CultureInfo("en"), new CultureInfo("sk") };
                 options.RequestCultureProviders.Clear();
-                options.RequestCultureProviders.Add(new LocalizationManager());
+                options.RequestCultureProviders.Add(new LocalizationProvider());
             });
 
             services.AddLocalization(options => options.ResourcesPath = "Resources");
@@ -117,7 +123,10 @@ namespace BlocklyGame
 
             app.UseAuthorization();
 
-            seeder.Run().Wait();
+            if (Configuration.GetSection("AppSettings").GetValue<bool>("SeederEnabled"))
+            {
+                seeder.Run().Wait();
+            }
 
             app.UseEndpoints(endpoints =>
             {

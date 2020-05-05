@@ -14,6 +14,10 @@ using BlocklyGame.Models;
 using Newtonsoft.Json;
 using Microsoft.Extensions.Localization;
 using Localization;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using BlocklyGame.Helpers;
+using System.Net.Http;
+using Newtonsoft.Json.Linq;
 
 namespace BlocklyGame.Controllers
 {
@@ -25,20 +29,24 @@ namespace BlocklyGame.Controllers
         //private readonly IEmailSender _emailSender;
         private readonly ILogger _logger;
         private readonly IStringLocalizer _localizer;
+        private readonly IOptions<ApplicationSettings> _appSettings;
+        private readonly IHttpClientFactory _clientFactory;
 
         public AccountController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            //IEmailSender emailSender,
             ILogger<AccountController> logger,
-            IStringLocalizer<SharedResource> localizer
+            IStringLocalizer<SharedResource> localizer,
+            IOptions<ApplicationSettings> appSettings,
+            IHttpClientFactory clientFactory
             )
         {
             _userManager = userManager;
             _signInManager = signInManager;
-            //_emailSender = emailSender;
             _logger = logger;
             _localizer = localizer;
+            _appSettings = appSettings;
+            _clientFactory = clientFactory;
         }
 
 
@@ -71,31 +79,78 @@ namespace BlocklyGame.Controllers
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
         [Route("/register")]
-        public async Task<IActionResult> Register(RegisterModel model, string returnUrl = null)
+        public async Task<IActionResult> Register(RegisterModel model)
         {
-            ViewData["ReturnUrl"] = returnUrl;
             if (ModelState.IsValid)
             {
-                var user = new ApplicationUser { UserName = model.Email, Email = model.Email };
-                var result = await _userManager.CreateAsync(user, model.Password);
+                if(!String.IsNullOrEmpty(_appSettings.Value.GOOGLE_RECAPTCHA_KEY) && !String.IsNullOrEmpty(_appSettings.Value.GOOGLE_RECAPTCHA_SECRET))
+                {
+                    if (await ValidateRecaptchaAsync(model.RecaptchaResponse) == false)
+                    {
+                        this.ModelState.AddModelError("g-recaptcha-response", _localizer["Please ensure that you are a human!"]);
+
+                        TempData["errors"] = GetErrors(ModelState
+                            .Where(x => x.Value.Errors.Count > 0)
+                            .ToDictionary(
+                                kvp => kvp.Key,
+                                kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToList()
+                        ));
+
+                        TempData["old"] = GetOldInputs(ModelState
+                            .ToDictionary(
+                                kvp => kvp.Key,
+                                kvp => kvp.Value.RawValue?.ToString()
+                        ));
+                        return RedirectToAction(nameof(HomeController.Index), "Home");
+                    }                   
+                }   
+
+                ApplicationUser user = new ApplicationUser { UserName = model.Username, Email = model.Email };
+                IdentityResult result = await _userManager.CreateAsync(user, model.Password);
                 if (result.Succeeded)
                 {
-                    _logger.LogInformation("User created a new account with password.");
-
-                    //var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                    ////var callbackUrl = Url.EmailConfirmationLink(user.Id, code, Request.Scheme);
-                    ////await _emailSender.SendEmailConfirmationAsync(model.Email, callbackUrl);
-
                     await _signInManager.SignInAsync(user, isPersistent: false);
-                    _logger.LogInformation("User created a new account with password.");
 
                     return RedirectToAction(nameof(HomeController.Index), "Home");
                 }
-                //AddErrors(result);
+
+                foreach (var error in result.Errors)
+                {
+                    string[] switchStrings = { "username", "email", "password" };
+                    switch (switchStrings.FirstOrDefault<string>(s => error.Code.ToLower().Contains(s)))
+                    {
+                        case
+                            "username":
+                            ModelState.AddModelError("register-username", error.Description);
+                            break;
+                        case
+                            "email":
+                            ModelState.AddModelError("register-email", error.Description);
+                            break;
+                        case
+                            "password":
+                            ModelState.AddModelError("register-password", error.Description);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                
             }
 
-            // If execution got this far, something failed, redisplay the form.
-            return View(model);
+            TempData["errors"] = GetErrors(ModelState
+                .Where(x => x.Value.Errors.Count > 0)
+                .ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToList()
+            ));
+            TempData["old"] = GetOldInputs(ModelState
+                .ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => kvp.Value.RawValue?.ToString()
+            ));
+
+            return RedirectToAction(nameof(HomeController.Index), "Home");
         }
 
         [HttpPost]
@@ -104,7 +159,6 @@ namespace BlocklyGame.Controllers
         public async Task<IActionResult> Logout()
         {
             await _signInManager.SignOutAsync();
-            _logger.LogInformation("User logged out.");
             return RedirectToAction(nameof(HomeController.Index), "Home");
         }        
 
@@ -113,5 +167,64 @@ namespace BlocklyGame.Controllers
         {
             return RedirectToAction(nameof(HomeController.Index), "Home");
         }
+
+        private string GetErrors(Dictionary<string, List<string>> errorList)
+        {
+            if(errorList.ContainsKey("register-password_confirmation"))
+            {
+                if (!errorList.ContainsKey("register-password"))
+                {
+                    errorList["register-password"] = new List<string>();
+                }
+                errorList["register-password"].AddRange(errorList["register-password_confirmation"]);
+            }
+
+            return JsonConvert.SerializeObject(errorList);
+        }
+
+        private string GetOldInputs(Dictionary<string, string> oldInputs)
+        {
+            string[] filteredFields = { "register-password", "register-password_confirmation"};
+            oldInputs = oldInputs.Where(kvp => !filteredFields.Contains(kvp.Key)).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
+            return JsonConvert.SerializeObject(oldInputs);
+        }
+
+        private async Task<bool> ValidateRecaptchaAsync(string recaptchaResponse)
+        {
+            if (String.IsNullOrEmpty(recaptchaResponse))
+            {
+                return false;
+            }
+
+            HttpClient httpClient = _clientFactory.CreateClient();
+            try
+            {
+                var formContent = new FormUrlEncodedContent(new[]
+                {   
+                        new KeyValuePair<string, string>("secret", _appSettings.Value.GOOGLE_RECAPTCHA_SECRET),
+                        new KeyValuePair<string, string>("response", recaptchaResponse)
+                });
+
+
+                HttpResponseMessage response = await httpClient.PostAsync("https://www.google.com/recaptcha/api/siteverify", formContent);
+                response.EnsureSuccessStatusCode();
+                string apiResponse = await response.Content.ReadAsStringAsync();
+
+                dynamic apiJson = JObject.Parse(apiResponse);
+                if (apiJson.success != true)
+                {
+                    return false;                    
+                }
+                return true;
+            }
+            catch (HttpRequestException ex)
+            {
+                // Something went wrong with the API.          
+                _logger.LogError(ex, "Unexpected error calling reCAPTCHA api.");
+                return false;
+            }
+        }
+
     }
 }

@@ -126,9 +126,6 @@
   <data name="cookies.msg" xml:space="preserve">
     <value>THIS WEB PAGE USES COOKIES. BY BROWSING THIS SITE, YOU AGREE TO USE THEM.</value>
   </data>
-  <data name="These credentials do not match our records." xml:space="preserve">
-    <value>These credentials do not match our records.</value>
-  </data>
   <data name="title" xml:space="preserve">
     <value>Blockly Game</value>
   </data>

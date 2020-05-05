@@ -126,10 +126,28 @@
   <data name="cookies.msg" xml:space="preserve">
     <value>TÁTO WEBOVÁ STRÁNKA POUŽÍVA SÚBORY COOKIES. PREHLIADANÍM VYJADRUJETE SÚHLAS S ICH POUŽÍVANÍM.</value>
   </data>
+  <data name="Email '{0}' is already taken." xml:space="preserve">
+    <value>E-mail '{0}' už existuje.</value>
+  </data>
+  <data name="Please ensure that you are a human!" xml:space="preserve">
+    <value>Prosím potvrďte, že nie ste robot.</value>
+  </data>
+  <data name="The Email you have entered is not a valid email address." xml:space="preserve">
+    <value>Nezadali ste platnú e-mailovú adresu.</value>
+  </data>
+  <data name="The password and confirmation password do not match." xml:space="preserve">
+    <value>Heslo a potvrdenie hesla sa nezhodujú.</value>
+  </data>
+  <data name="The password must be at least {2} and at max {1} characters long." xml:space="preserve">
+    <value>Heslo musí mať najmenej {2} znakov a najviac {1} znakov.</value>
+  </data>
   <data name="These credentials do not match our records." xml:space="preserve">
     <value>Prihlasovacie údaje nie sú správne.</value>
   </data>
   <data name="title" xml:space="preserve">
     <value>Blockly Hra</value>
+  </data>
+  <data name="User Name '{0}' is already taken." xml:space="preserve">
+    <value>Prihlasovacie meno '{0}' už existuje.</value>
   </data>
 </root>

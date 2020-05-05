@@ -14,6 +14,8 @@ using Newtonsoft.Json;
 using Microsoft.Extensions.Localization;
 using BlocklyGame.Managers;
 using Localization;
+using BlocklyGame.Helpers;
+using Microsoft.Extensions.Options;
 //using BlocklyGame.Models;
 
 namespace BlocklyGame.Controllers
@@ -25,14 +27,21 @@ namespace BlocklyGame.Controllers
         private readonly IAntiforgery _antiforgery;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IStringLocalizer _localizer;
+        private readonly IOptions<ApplicationSettings> _appSettings;
 
-        public HomeController(ILogger<HomeController> logger, ApplicationDbContext dbContext, IAntiforgery antiforgery, UserManager<ApplicationUser> userManager, IStringLocalizer<SharedResource> localizer)
+        public HomeController(
+            ILogger<HomeController> logger, 
+            ApplicationDbContext dbContext, 
+            IAntiforgery antiforgery, UserManager<ApplicationUser> userManager, 
+            IStringLocalizer<SharedResource> localizer,
+            IOptions<ApplicationSettings> appSettings)
         {
             _logger = logger;
             _dbContext = dbContext;
             _antiforgery = antiforgery;
             _userManager = userManager;
             _localizer = localizer;
+            _appSettings = appSettings;
         }
   
         public async Task<IActionResult> Index()
@@ -46,6 +55,7 @@ namespace BlocklyGame.Controllers
             indexModel.Cookies.Add("dismiss", _localizer["cookies.dismiss"]);
             indexModel.Cookies.Add("link", _localizer["cookies.link"]);
             indexModel.Title = _localizer["title"];
+            indexModel.RecaptchaKey = _appSettings.Value.GOOGLE_RECAPTCHA_KEY;
 
             ApplicationUser user = await _userManager.GetUserAsync(HttpContext.User);
             if (user != null)
@@ -58,6 +68,12 @@ namespace BlocklyGame.Controllers
             {
                 indexModel.Errors = TempData["errors"].ToString();
             }
+
+            if (TempData.ContainsKey("old"))
+            {
+                indexModel.Old = TempData["Old"].ToString();
+            }
+
 
             return View(indexModel);
         }
