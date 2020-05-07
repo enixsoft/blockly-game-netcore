@@ -16,6 +16,10 @@ using BlocklyGame.Managers;
 using Localization;
 using BlocklyGame.Helpers;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Localization;
+using Microsoft.Extensions.FileProviders;
+using System.IO;
+using Microsoft.AspNetCore.Hosting;
 //using BlocklyGame.Models;
 
 namespace BlocklyGame.Controllers
@@ -28,13 +32,17 @@ namespace BlocklyGame.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IStringLocalizer _localizer;
         private readonly IOptions<ApplicationSettings> _appSettings;
+        private readonly IWebHostEnvironment _hostingEnvironment;
+
 
         public HomeController(
             ILogger<HomeController> logger, 
             ApplicationDbContext dbContext, 
             IAntiforgery antiforgery, UserManager<ApplicationUser> userManager, 
             IStringLocalizer<SharedResource> localizer,
-            IOptions<ApplicationSettings> appSettings)
+            IOptions<ApplicationSettings> appSettings,
+            IWebHostEnvironment hostingEnvironment
+            )
         {
             _logger = logger;
             _dbContext = dbContext;
@@ -42,14 +50,19 @@ namespace BlocklyGame.Controllers
             _userManager = userManager;
             _localizer = localizer;
             _appSettings = appSettings;
+            _hostingEnvironment = hostingEnvironment;
         }
   
         public async Task<IActionResult> Index()
-        {
+        {    
+
             IndexModel indexModel = new IndexModel
             {
                 CsrfToken = _antiforgery.GetAndStoreTokens(HttpContext).RequestToken
-            }; 
+            };
+
+            string lang = Request.HttpContext.Features.Get<IRequestCultureFeature>().RequestCulture.Culture.Name;
+            indexModel.Lang = await System.IO.File.ReadAllTextAsync(Path.Combine(_hostingEnvironment.ContentRootPath, $"Resources\\Game\\locales\\{lang}.json"));
 
             indexModel.Cookies.Add("msg", _localizer["cookies.msg"]);
             indexModel.Cookies.Add("dismiss", _localizer["cookies.dismiss"]);
@@ -71,7 +84,12 @@ namespace BlocklyGame.Controllers
 
             if (TempData.ContainsKey("old"))
             {
-                indexModel.Old = TempData["Old"].ToString();
+                indexModel.Old = TempData["old"].ToString();
+            }
+
+            if (TempData.ContainsKey("gamedata"))
+            {
+                indexModel.GameData = JsonConvert.SerializeObject(TempData["gamedata"]);
             }
 
 
