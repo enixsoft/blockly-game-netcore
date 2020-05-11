@@ -54,8 +54,7 @@ namespace BlocklyGame.Controllers
         }
   
         public async Task<IActionResult> Index()
-        {    
-
+        { 
             IndexModel indexModel = new IndexModel
             {
                 CsrfToken = _antiforgery.GetAndStoreTokens(HttpContext).RequestToken
@@ -75,7 +74,7 @@ namespace BlocklyGame.Controllers
             {
                 List<string> roles = new List<string>(await _userManager.GetRolesAsync(user));
                 indexModel.User = JsonConvert.SerializeObject(new { username = user.UserName, email = user.Email, role = roles.Contains("Administrator") ? "admin" : "user" });
-            }  
+            }
 
             if (TempData.ContainsKey("errors"))
             {
@@ -87,13 +86,7 @@ namespace BlocklyGame.Controllers
                 indexModel.Old = TempData["old"].ToString();
             }
 
-            if (TempData.ContainsKey("gamedata"))
-            {
-                indexModel.GameData = JsonConvert.SerializeObject(TempData["gamedata"]);
-            }
-
-
-            return View(indexModel);
+            return View("Index", indexModel);
         }
 
         //public IActionResult Privacy()

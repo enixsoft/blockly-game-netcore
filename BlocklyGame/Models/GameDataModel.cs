@@ -1,30 +1,29 @@
-﻿using System;
+﻿using BlocklyGame.Models.Game;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace BlocklyGame.Models
 {
     public class GameDataModel
     {
-        public string CsrfToken { get; set; }
+        public string category { get; set; }
 
-        public string Title { get; set; } = "Title";
+        public string level { get; set; }
 
-        public string User { get; set; } = "null";
+        public string xmlToolbox { get; set; }
 
-        public string Errors { get; set; } = "{}";
+        public string xmlStartBlocks { get; set; } 
 
-        public string Old { get; set; } = "{}";
+        public Dictionary<string, string> savedGame { get; set; }
 
-        public string Lang { get; set; } = "{}";
+        public string jsonTasks { get; set; }
 
-        public string RecaptchaKey { get; set; } = "null";
+        public string jsonModals { get; set; }        
 
-        public string InGameProgress { get; set; } = "[]";
-
-        public string GameData { get; set; } = "[]";
-
-        public Dictionary<string, string> Cookies { get; set; } = new Dictionary<string, string>();   
+        public string jsonRatings { get; set; } 
     }
 }

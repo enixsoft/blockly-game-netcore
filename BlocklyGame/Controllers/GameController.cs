@@ -34,6 +34,11 @@ namespace BlocklyGame.Controllers
         private readonly IOptions<ApplicationSettings> _appSettings;
         private readonly IWebHostEnvironment _hostingEnvironment;
 
+        private static readonly int[] categoryHasLevelsArray = { 6, 6 };
+        private static readonly int categoryMin = 1;
+        private static readonly int categoryMax = categoryHasLevelsArray.Length;
+        private static readonly int levelMin = 1;
+
         public GameController(
             ILogger<HomeController> logger,
             ApplicationDbContext dbContext,
@@ -57,29 +62,155 @@ namespace BlocklyGame.Controllers
         //[ValidateAntiForgeryToken]
         public async Task<IActionResult> Index(int category, int level)
         {
+            if (!ValidateCategoryAndLevel(category, level))
+            {
+                return RedirectToAction(nameof(HomeController.Index), "Home");
+            }
+
+            if (category < categoryMax && level == categoryHasLevelsArray[category - 1])
+            {
+                return RedirectToAction(nameof(GameController.Index), "Game", new { category = (category + 1).ToString(), level = levelMin.ToString() });
+            }
+
             bool requiresJsonResponse = HttpContext.Request.GetTypedHeaders()
                                                    .Accept.Any(t => t.Suffix.Value?.ToUpper() == "JSON"
                                                    || t.SubTypeWithoutSuffix.Value?.ToUpper() == "JSON");
 
             ApplicationUser user = await _userManager.GetUserAsync(HttpContext.User);
 
-            Dictionary<string, string> result = await RunGame(category, level, user);
+            GameDataModel result = await RunGame(category, level, user);
 
             if (requiresJsonResponse)
             {
                 return Json(result);
             }
 
-            TempData["gamedata"] = result;
-            return RedirectToAction(nameof(HomeController.Index), "Home");
+            if(result == null)
+            {
+                return RedirectToAction(nameof(HomeController.Index), "Home");
+            }
+
+            IndexModel indexModel = new IndexModel
+            {
+                CsrfToken = _antiforgery.GetAndStoreTokens(HttpContext).RequestToken
+            };
+
+            string lang = Request.HttpContext.Features.Get<IRequestCultureFeature>().RequestCulture.Culture.Name;
+            indexModel.Lang = await System.IO.File.ReadAllTextAsync(Path.Combine(_hostingEnvironment.ContentRootPath, $"Resources\\Game\\locales\\{lang}.json"));
+
+            indexModel.Cookies.Add("msg", _localizer["cookies.msg"]);
+            indexModel.Cookies.Add("dismiss", _localizer["cookies.dismiss"]);
+            indexModel.Cookies.Add("link", _localizer["cookies.link"]);
+            indexModel.Title = _localizer["title"];
+            indexModel.RecaptchaKey = _appSettings.Value.GOOGLE_RECAPTCHA_KEY;
+            List<string> roles = new List<string>(await _userManager.GetRolesAsync(user));
+            indexModel.User = JsonSerializer.Serialize(new { username = user.UserName, email = user.Email, role = roles.Contains("Administrator") ? "admin" : "user" });
+            indexModel.GameData = JsonSerializer.Serialize(result);
+
+            return View("Index", indexModel);
         }
 
-        private async Task<Dictionary<string, string>> RunGame(int category, int level, ApplicationUser user)
+        [HttpGet("/play")]
+        [Authorize]
+        //[ValidateAntiForgeryToken]
+        public async Task<IActionResult> StartNewGameOrContinue()
         {
-            int[] categoryHasLevelsArray = { 6, 6 };
-            int categoryMin = 1;
-            int categoryMax = categoryHasLevelsArray.Length;
-            int levelMin = 1;
+            ApplicationUser user = await _userManager.GetUserAsync(HttpContext.User);
+            
+            Progress inGameProgress = _dbContext.Progress
+                                      .Where(p => p.UserId == user.Id)
+                                      .FirstOrDefault();
+
+            if (inGameProgress == null)
+            {
+                return RedirectToAction(nameof(GameController.Index), "Game", new { category = "1", level = "1" });
+            }
+            else if (inGameProgress.Percentage == 100)
+            {
+                return RedirectToAction(nameof(GameController.Index), "Game", new { category = inGameProgress.Category.ToString(), level = (inGameProgress.Level + 1).ToString() });    
+            }
+            else
+            {
+                return RedirectToAction(nameof(GameController.Index), "Game", new { category = inGameProgress.Category.ToString(), level = inGameProgress.Level.ToString() });
+            }
+        }
+
+        [HttpGet("/start/{category}/{level}")]
+        [Authorize]
+        //[ValidateAntiForgeryToken]
+        public async Task<IActionResult> StartLevelAsNew(int category, int level)
+        {
+            ApplicationUser user = await _userManager.GetUserAsync(HttpContext.User);
+
+            if (!ValidateCategoryAndLevel(category, level))
+            {
+                return RedirectToAction(nameof(HomeController.Index), "Home");
+            }
+
+            Progress inGameProgress = _dbContext.Progress
+                                      .Where(p => p.UserId == user.Id && p.Category == category)
+                                      .FirstOrDefault();
+
+            if (inGameProgress == null)
+            {
+                return RedirectToAction(nameof(HomeController.Index), "Home");
+            }
+            else if (inGameProgress.Level > level || (inGameProgress.Level == level && inGameProgress.Percentage == 100))
+            {
+                string jsonStartGame = await System.IO.File.ReadAllTextAsync(Path.Combine(_hostingEnvironment.ContentRootPath, $"Resources\\Game\\{category}x{level}\\start{category}x{level}.json"));
+
+                SavedGame savedGame = _dbContext.SavedGames
+                .Where(s => s.UserId == user.Id && s.Category == category && s.Level == level && s.Progress == 0)            
+                .FirstOrDefault();
+
+                if (savedGame != null)
+                {
+                    savedGame.Progress = 0;                    
+                }
+                else
+                {
+                    savedGame = new SavedGame()
+                    {
+                        UserId = user.Id,
+                        Category = category,
+                        Level = level,
+                        Progress = 0,
+                        Json = jsonStartGame
+                    };
+                    _dbContext.Add(savedGame);
+                }
+                _dbContext.SaveChanges();
+            }
+            return RedirectToAction(nameof(GameController.Index), "Game", new { category, level });
+        }
+
+        [HttpGet("/continue/{category}/{level}")]
+        [Authorize]
+        //[ValidateAntiForgeryToken]
+        public async Task<IActionResult> ContinueLevel(int category, int level)
+        {
+            ApplicationUser user = await _userManager.GetUserAsync(HttpContext.User);
+
+            if (!ValidateCategoryAndLevel(category, level))
+            {
+                return RedirectToAction(nameof(HomeController.Index), "Home");
+            }
+            else
+            {
+                Progress inGameProgress = _dbContext.Progress
+                              .Where(p => p.UserId == user.Id && p.Category == category)
+                              .FirstOrDefault();
+
+                if (inGameProgress != null && inGameProgress.Level >= level)
+                {
+                    return RedirectToAction(nameof(GameController.Index), "Game", new { category, level });
+                }
+                else return RedirectToAction(nameof(HomeController.Index), "Home");
+            }
+        }
+
+        private bool ValidateCategoryAndLevel(int category, int level)
+        {
             int levelMax = 0;
 
             if (category <= categoryMax && category >= categoryMin)
@@ -89,37 +220,29 @@ namespace BlocklyGame.Controllers
 
             if (category > categoryMax || category < categoryMin || level < levelMin || level > levelMax)
             {
-                return new Dictionary<string, string>();
+                return false;
             }
             else if (category == categoryMax && level == levelMax)
             {
-                return new Dictionary<string, string>();
+                return false;
             }
-            else if (category < categoryMax && level == levelMax)
-            {
-                return await RunGame(category + 1, levelMin, user);
-            }
+            return true;
+        }
 
+        private async Task<GameDataModel> RunGame(int category, int level, ApplicationUser user)
+        {
             Progress inGameProgress = _dbContext.Progress
                                       .Where(p => p.UserId == user.Id && p.Category == category)
                                       .FirstOrDefault();
 
-            // string lang = Request.HttpContext.Features.Get<IRequestCultureFeature>().RequestCulture.Culture.Name;
-
-            string xmlToolBox = await System.IO.File.ReadAllTextAsync(Path.Combine(_hostingEnvironment.ContentRootPath, $"Resources\\Game\\{category}x{level}\\toolbox{category}x{level}.xml"));
-            string xmlStartBlocks = await System.IO.File.ReadAllTextAsync(Path.Combine(_hostingEnvironment.ContentRootPath, $"Resources\\Game\\common\\xmlStartBlocks{category}.xml"));
             string jsonStartGame = await System.IO.File.ReadAllTextAsync(Path.Combine(_hostingEnvironment.ContentRootPath, $"Resources\\Game\\{category}x{level}\\start{category}x{level}.json"));
-            string jsonTasks = await System.IO.File.ReadAllTextAsync(Path.Combine(_hostingEnvironment.ContentRootPath, $"Resources\\Game\\{category}x{level}\\modals{category}x{level}.json"));
-            string jsonRatings = await System.IO.File.ReadAllTextAsync(Path.Combine(_hostingEnvironment.ContentRootPath, $"Resources\\Game\\{category}x{level}\\ratings{category}x{level}.json"));
-            string jsonModals = await System.IO.File.ReadAllTextAsync(Path.Combine(_hostingEnvironment.ContentRootPath, $"Resources\\Game\\common\\modals.json"));
             SavedGame savedGame = null;
 
             if (inGameProgress == null) //game was not played at all or requested category was not played yet            
             {
                 if (category == 1)
                 {
-                    //no ingame progress in category 1 exists yet for this user, set level1 with 0 progress
-                    //Progress::create(['username' => $auth->username, 'category' => $category, 'level' => $level, 'progress' => 0]);
+                    //no ingame progress in category 1 exists yet for this user, set level 1 with 0 progress
 
                     _dbContext.Progress.Add(new Progress()
                     {
@@ -130,14 +253,17 @@ namespace BlocklyGame.Controllers
                     });
 
                     //no saved game in this category and level exists yet for this user, create first saved game with 0 progress from startgame json
-                    _dbContext.SavedGames.Add(new SavedGame()
+
+                    savedGame = new SavedGame()
                     {
                         UserId = user.Id,
                         Category = category,
                         Level = level,
                         Progress = 0,
                         Json = jsonStartGame
-                    });
+                    };
+
+                    _dbContext.SavedGames.Add(savedGame);
 
                     _dbContext.SaveChanges();
                 }
@@ -145,14 +271,13 @@ namespace BlocklyGame.Controllers
                 else
                 {
                     //check if player has 100 progress in previous max level of previous category
-                    var inGameProgressOfPreviousLevelOfPreviousCategory = _dbContext.Progress
+                    Progress inGameProgressOfPreviousLevelOfPreviousCategory = _dbContext.Progress
                                       .Where(p => p.UserId == user.Id && (p.Category == category - 1) && (level == categoryHasLevelsArray[category - 1] - 1))
-                                      .First();
+                                      .FirstOrDefault();
 
                     if (inGameProgressOfPreviousLevelOfPreviousCategory == null || inGameProgressOfPreviousLevelOfPreviousCategory.Percentage != 100)
                     {
-                        //redirect startNewGameOrContinue
-                        //return $this->startNewGameOrContinue($request);
+                        return null;
                     }
                     else
                     {
@@ -180,10 +305,9 @@ namespace BlocklyGame.Controllers
                             _dbContext.SaveChanges();
 
                         }
-
                         else
                         {
-                            return await RunGame(category, 1, user);
+                            return null;
                         }
 
                     }
@@ -200,8 +324,8 @@ namespace BlocklyGame.Controllers
                     //if player has progress beyond the requested level
                     savedGame = _dbContext.SavedGames
                                       .Where(s => s.UserId == user.Id && s.Category == category && s.Level == level)
-                                      .OrderByDescending(p => p.Id)
-                                      .First();
+                                      .OrderByDescending(p => p.UpdatedDate)
+                                      .FirstOrDefault();
                 }
                 else if (inGameProgress.Level == level)
                 {
@@ -211,16 +335,16 @@ namespace BlocklyGame.Controllers
 
                         savedGame = _dbContext.SavedGames
                                       .Where(s => s.UserId == user.Id && s.Category == category && s.Level == level && s.Progress == inGameProgress.Percentage)
-                                      .OrderByDescending(p => p.Id)
-                                      .First();
+                                      .OrderByDescending(p => p.UpdatedDate)
+                                      .FirstOrDefault();
 
                         //if player due to error does not have the savedgame with progress he has, he gets the latest savedgame
                         if (savedGame == null)
                         {
                             savedGame = _dbContext.SavedGames
                                       .Where(s => s.UserId == user.Id && s.Category == category && s.Level == level)
-                                      .OrderByDescending(p => p.Id)
-                                      .First();
+                                      .OrderByDescending(p => p.UpdatedDate)
+                                      .FirstOrDefault();
                         }
 
                     }
@@ -231,8 +355,8 @@ namespace BlocklyGame.Controllers
 
                         savedGame = _dbContext.SavedGames
                                      .Where(s => s.UserId == user.Id && s.Category == category && s.Level == level)
-                                     .OrderByDescending(p => p.Id)
-                                     .First();
+                                     .OrderByDescending(p => p.UpdatedDate)
+                                     .FirstOrDefault();
                     }
 
                 }
@@ -262,26 +386,25 @@ namespace BlocklyGame.Controllers
                 }
                 else
                 {
-                    //return redirect
-                    //return $this->startNewGameOrContinue($request);
+                    return null;
                 }
 
             }
-   
 
-            Dictionary<string, string> result = new Dictionary<string, string>();
 
-            result.Add("category", category.ToString());
-            result.Add("level", level.ToString());
-            result.Add("xmlToolbox", xmlToolBox);
-            result.Add("xmlStartBlocks", xmlStartBlocks);
-            result.Add("savedGame", JsonSerializer.Serialize(savedGame));
-            result.Add("jsonTasks", jsonTasks);
-            result.Add("jsonModals", jsonModals);
-            result.Add("jsonRatings", jsonRatings);
+            GameDataModel result = new GameDataModel
+            { 
+                category = category.ToString(),
+                level = level.ToString(),
+                xmlToolbox = await System.IO.File.ReadAllTextAsync(Path.Combine(_hostingEnvironment.ContentRootPath, $"Resources\\Game\\{category}x{level}\\toolbox{category}x{level}.xml")),
+                xmlStartBlocks = await System.IO.File.ReadAllTextAsync(Path.Combine(_hostingEnvironment.ContentRootPath, $"Resources\\Game\\common\\xmlStartBlocks{category}.xml")),
+                savedGame = new Dictionary<string, string>() { { "json", savedGame.Json }, { "progress", savedGame.Progress.ToString() } },
+                jsonTasks = await System.IO.File.ReadAllTextAsync(Path.Combine(_hostingEnvironment.ContentRootPath, $"Resources\\Game\\{category}x{level}\\modals{category}x{level}.json")),
+                jsonModals = await System.IO.File.ReadAllTextAsync(Path.Combine(_hostingEnvironment.ContentRootPath, $"Resources\\Game\\common\\modals.json")),
+                jsonRatings = await System.IO.File.ReadAllTextAsync(Path.Combine(_hostingEnvironment.ContentRootPath, $"Resources\\Game\\{category}x{level}\\ratings{category}x{level}.json"))
+            };
 
             return result;
-            //return $this->redirectOrSendResponse(compact('category', 'level', 'xmlToolbox', 'xmlStartBlocks', 'savedGame', 'jsonTasks', 'jsonModals', 'jsonRatings'), $request);
         }
     }
 }       
