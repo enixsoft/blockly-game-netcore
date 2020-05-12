@@ -80,7 +80,7 @@ export default {
 		
 		$.ajaxSetup({
 			beforeSend: (xhr) => {
-				xhr.setRequestHeader('X-CSRF-TOKEN', this.CsrfToken);
+				xhr.setRequestHeader('RequestVerificationToken', this.CsrfToken);
 			}
 		});
 

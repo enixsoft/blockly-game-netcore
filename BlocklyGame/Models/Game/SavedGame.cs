@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace BlocklyGame.Models.Game
@@ -15,6 +16,7 @@ namespace BlocklyGame.Models.Game
         public int Category { get; set; }
         public int Level { get; set; }
         public int Progress { get; set; }
+        [JsonPropertyNameAttribute("save")]
         public string Json { get; set; }
     }
 }

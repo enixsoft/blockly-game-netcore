@@ -167,7 +167,8 @@ function sendRequest(request)
 			headers: request.headers,
 			method: request.method, 
 			url: request.url, 
-			data: request.data,
+			data: JSON.stringify(request.data),
+			contentType: 'application/json; charset=utf-8',
 			success: (response) => { 
 				return success(response);
 			},

@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.FileProviders;
 using System.IO;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity.UI.V3.Pages.Internal.Account.Manage;
 //using BlocklyGame.Models;
 
 namespace BlocklyGame.Controllers
@@ -33,6 +34,7 @@ namespace BlocklyGame.Controllers
         private readonly IStringLocalizer _localizer;
         private readonly IOptions<ApplicationSettings> _appSettings;
         private readonly IWebHostEnvironment _hostingEnvironment;
+        private readonly DataManager _dataManager;
 
 
         public HomeController(
@@ -41,7 +43,8 @@ namespace BlocklyGame.Controllers
             IAntiforgery antiforgery, UserManager<ApplicationUser> userManager, 
             IStringLocalizer<SharedResource> localizer,
             IOptions<ApplicationSettings> appSettings,
-            IWebHostEnvironment hostingEnvironment
+            IWebHostEnvironment hostingEnvironment,
+            DataManager dataManager
             )
         {
             _logger = logger;
@@ -51,30 +54,16 @@ namespace BlocklyGame.Controllers
             _localizer = localizer;
             _appSettings = appSettings;
             _hostingEnvironment = hostingEnvironment;
+            _dataManager = dataManager;
         }
   
         public async Task<IActionResult> Index()
-        { 
-            IndexModel indexModel = new IndexModel
-            {
-                CsrfToken = _antiforgery.GetAndStoreTokens(HttpContext).RequestToken
-            };
-
-            string lang = Request.HttpContext.Features.Get<IRequestCultureFeature>().RequestCulture.Culture.Name;
-            indexModel.Lang = await System.IO.File.ReadAllTextAsync(Path.Combine(_hostingEnvironment.ContentRootPath, $"Resources\\Game\\locales\\{lang}.json"));
-
-            indexModel.Cookies.Add("msg", _localizer["cookies.msg"]);
-            indexModel.Cookies.Add("dismiss", _localizer["cookies.dismiss"]);
-            indexModel.Cookies.Add("link", _localizer["cookies.link"]);
-            indexModel.Title = _localizer["title"];
-            indexModel.RecaptchaKey = _appSettings.Value.GOOGLE_RECAPTCHA_KEY;
-
-            ApplicationUser user = await _userManager.GetUserAsync(HttpContext.User);
-            if (user != null)
-            {
-                List<string> roles = new List<string>(await _userManager.GetRolesAsync(user));
-                indexModel.User = JsonConvert.SerializeObject(new { username = user.UserName, email = user.Email, role = roles.Contains("Administrator") ? "admin" : "user" });
-            }
+        {
+            IndexModel indexModel = await _dataManager.CreateIndexModel(
+                 _antiforgery.GetAndStoreTokens(HttpContext).RequestToken,
+                 Request.HttpContext.Features.Get<IRequestCultureFeature>().RequestCulture.Culture.Name,
+                 await _userManager.GetUserAsync(HttpContext.User)
+                );
 
             if (TempData.ContainsKey("errors"))
             {

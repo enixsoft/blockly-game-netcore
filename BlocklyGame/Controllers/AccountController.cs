@@ -1,23 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using BlocklyGame.Models;
-using Newtonsoft.Json;
 using Microsoft.Extensions.Localization;
 using Localization;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using BlocklyGame.Helpers;
 using System.Net.Http;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
 
 namespace BlocklyGame.Controllers
 {
@@ -66,12 +62,12 @@ namespace BlocklyGame.Controllers
                 }
                 else
                 {
-                    TempData["errors"] = JsonConvert.SerializeObject(new Dictionary<string, List<string>>() { { "username", new List<string> () { _localizer["These credentials do not match our records."] } } });
+                    TempData["errors"] = JsonSerializer.Serialize(new Dictionary<string, List<string>>() { { "username", new List<string> () { _localizer["These credentials do not match our records."] } } });
                     return RedirectToAction(nameof(HomeController.Index), "Home");
                 }
             }
 
-            TempData["errors"] = JsonConvert.SerializeObject(new Dictionary<string, List<string>>() { { "username", new List<string>() { _localizer["These credentials do not match our records."] } } });
+            TempData["errors"] = JsonSerializer.Serialize(new Dictionary<string, List<string>>() { { "username", new List<string>() { _localizer["These credentials do not match our records."] } } });
             return RedirectToAction(nameof(HomeController.Index), "Home");
         }
 
@@ -179,7 +175,7 @@ namespace BlocklyGame.Controllers
                 errorList["register-password"].AddRange(errorList["register-password_confirmation"]);
             }
 
-            return JsonConvert.SerializeObject(errorList);
+            return JsonSerializer.Serialize(errorList);
         }
 
         private string GetOldInputs(Dictionary<string, string> oldInputs)
@@ -187,7 +183,7 @@ namespace BlocklyGame.Controllers
             string[] filteredFields = { "register-password", "register-password_confirmation"};
             oldInputs = oldInputs.Where(kvp => !filteredFields.Contains(kvp.Key)).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
-            return JsonConvert.SerializeObject(oldInputs);
+            return JsonSerializer.Serialize(oldInputs);
         }
 
         private async Task<bool> ValidateRecaptchaAsync(string recaptchaResponse)
@@ -211,12 +207,8 @@ namespace BlocklyGame.Controllers
                 response.EnsureSuccessStatusCode();
                 string apiResponse = await response.Content.ReadAsStringAsync();
 
-                dynamic apiJson = JObject.Parse(apiResponse);
-                if (apiJson.success != true)
-                {
-                    return false;                    
-                }
-                return true;
+                JsonDocument apiJson = JsonDocument.Parse(apiResponse);            
+                return apiJson.RootElement.GetProperty("success").GetBoolean();
             }
             catch (HttpRequestException ex)
             {

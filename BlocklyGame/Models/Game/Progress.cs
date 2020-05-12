@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text.Json.Serialization;
 
 namespace BlocklyGame.Models.Game
 {
@@ -14,6 +15,7 @@ namespace BlocklyGame.Models.Game
         public ApplicationUser User { get; set; }
         public int Category { get; set; }
         public int Level { get; set; }
+        [JsonPropertyNameAttribute("progress")]
         public int Percentage { get; set; }
     }
 }

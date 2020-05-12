@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -18,11 +17,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Text.Json;
+using BlocklyGame.Managers;
 
 namespace BlocklyGame.Controllers
 {
     [Route("[controller]")]
+    [AutoValidateAntiforgeryToken]
     [ApiController]
     public class GameController : Controller
     {
@@ -33,6 +33,7 @@ namespace BlocklyGame.Controllers
         private readonly IStringLocalizer _localizer;
         private readonly IOptions<ApplicationSettings> _appSettings;
         private readonly IWebHostEnvironment _hostingEnvironment;
+        private readonly DataManager _dataManager;
 
         private static readonly int[] categoryHasLevelsArray = { 6, 6 };
         private static readonly int categoryMin = 1;
@@ -45,7 +46,8 @@ namespace BlocklyGame.Controllers
             IAntiforgery antiforgery, UserManager<ApplicationUser> userManager,
             IStringLocalizer<SharedResource> localizer,
             IOptions<ApplicationSettings> appSettings,
-            IWebHostEnvironment hostingEnvironment
+            IWebHostEnvironment hostingEnvironment,
+            DataManager dataManager
             )
         {
             _logger = logger;
@@ -55,11 +57,11 @@ namespace BlocklyGame.Controllers
             _appSettings = appSettings;
             _hostingEnvironment = hostingEnvironment;
             _dbContext = dbContext;
+            _dataManager = dataManager;
         }
 
         [HttpGet("{category}/{level}")]
         [Authorize]
-        //[ValidateAntiForgeryToken]
         public async Task<IActionResult> Index(int category, int level)
         {
             if (!ValidateCategoryAndLevel(category, level))
@@ -78,41 +80,31 @@ namespace BlocklyGame.Controllers
 
             ApplicationUser user = await _userManager.GetUserAsync(HttpContext.User);
 
-            GameDataModel result = await RunGame(category, level, user);
+            GameDataModel gameData = await RunGame(category, level, user);
 
             if (requiresJsonResponse)
             {
-                return Json(result);
+                return Json(gameData);
             }
 
-            if(result == null)
+            if(gameData == null)
             {
                 return RedirectToAction(nameof(HomeController.Index), "Home");
             }
 
-            IndexModel indexModel = new IndexModel
-            {
-                CsrfToken = _antiforgery.GetAndStoreTokens(HttpContext).RequestToken
-            };
+            IndexModel indexModel = await _dataManager.CreateIndexModel(
+                _antiforgery.GetAndStoreTokens(HttpContext).RequestToken,
+                Request.HttpContext.Features.Get<IRequestCultureFeature>().RequestCulture.Culture.Name,
+                await _userManager.GetUserAsync(HttpContext.User),
+                gameData
+                );
 
-            string lang = Request.HttpContext.Features.Get<IRequestCultureFeature>().RequestCulture.Culture.Name;
-            indexModel.Lang = await System.IO.File.ReadAllTextAsync(Path.Combine(_hostingEnvironment.ContentRootPath, $"Resources\\Game\\locales\\{lang}.json"));
-
-            indexModel.Cookies.Add("msg", _localizer["cookies.msg"]);
-            indexModel.Cookies.Add("dismiss", _localizer["cookies.dismiss"]);
-            indexModel.Cookies.Add("link", _localizer["cookies.link"]);
-            indexModel.Title = _localizer["title"];
-            indexModel.RecaptchaKey = _appSettings.Value.GOOGLE_RECAPTCHA_KEY;
-            List<string> roles = new List<string>(await _userManager.GetRolesAsync(user));
-            indexModel.User = JsonSerializer.Serialize(new { username = user.UserName, email = user.Email, role = roles.Contains("Administrator") ? "admin" : "user" });
-            indexModel.GameData = JsonSerializer.Serialize(result);
 
             return View("Index", indexModel);
         }
 
         [HttpGet("/play")]
         [Authorize]
-        //[ValidateAntiForgeryToken]
         public async Task<IActionResult> StartNewGameOrContinue()
         {
             ApplicationUser user = await _userManager.GetUserAsync(HttpContext.User);
@@ -137,7 +129,6 @@ namespace BlocklyGame.Controllers
 
         [HttpGet("/start/{category}/{level}")]
         [Authorize]
-        //[ValidateAntiForgeryToken]
         public async Task<IActionResult> StartLevelAsNew(int category, int level)
         {
             ApplicationUser user = await _userManager.GetUserAsync(HttpContext.User);
@@ -186,7 +177,6 @@ namespace BlocklyGame.Controllers
 
         [HttpGet("/continue/{category}/{level}")]
         [Authorize]
-        //[ValidateAntiForgeryToken]
         public async Task<IActionResult> ContinueLevel(int category, int level)
         {
             ApplicationUser user = await _userManager.GetUserAsync(HttpContext.User);
@@ -207,6 +197,124 @@ namespace BlocklyGame.Controllers
                 }
                 else return RedirectToAction(nameof(HomeController.Index), "Home");
             }
+        }
+
+        [HttpPost("savegame")]
+        [Authorize]
+        public async Task<IActionResult> SaveGame(SavedGame savedGame)
+        {
+            ApplicationUser user = await _userManager.GetUserAsync(HttpContext.User);
+            if(ValidateCategoryAndLevel(savedGame.Category, savedGame.Level) 
+                && !String.IsNullOrEmpty(savedGame.Json) 
+                && savedGame.Progress >= 0 && savedGame.Progress <= 100
+                && user.Id == savedGame.UserId)
+            {
+                _dbContext.Add(savedGame);
+                _dbContext.SaveChanges();
+                return Ok();
+            }
+            return BadRequest();
+            
+        }
+
+        [HttpPost("updateingameprogress")]
+        [Authorize]
+        public async Task<IActionResult> UpdateIngameProgress(Progress progress)
+        {
+            ApplicationUser user = await _userManager.GetUserAsync(HttpContext.User);
+            if (ValidateCategoryAndLevel(progress.Category, progress.Level)
+                && progress.Percentage >= 0 && progress.Percentage <= 100
+                && user.Id == progress.UserId)
+            {
+                Progress currentProgress = _dbContext.Progress
+                                      .Where(p => p.UserId == user.Id && p.Category == progress.Category)
+                                      .FirstOrDefault();
+
+                if(currentProgress == null)
+                {
+                    return BadRequest();
+                }
+
+                if (currentProgress.Level == progress.Level && currentProgress.Percentage < progress.Percentage)
+                {
+                    currentProgress.Category = progress.Category;
+                    currentProgress.Level = progress.Level;
+                    currentProgress.Percentage = progress.Percentage;
+                    _dbContext.SaveChanges();
+                }
+                return Ok();
+            }
+            return BadRequest();
+        }
+
+        [HttpPost("createlogofgameplay")]
+        [Authorize]        
+        public async Task<IActionResult> CreateLogOfGameplay(Gameplay gameplay)
+        {
+            ApplicationUser user = await _userManager.GetUserAsync(HttpContext.User);
+            if (ValidateCategoryAndLevel(gameplay.Category, gameplay.Level)  
+                && user.Id == gameplay.UserId)
+            {
+                _dbContext.Add(gameplay);
+                _dbContext.SaveChanges();
+                return Ok();
+            }
+            return BadRequest();
+        }
+
+        [HttpPost("reportbug")]
+        [Authorize]        
+        public async Task<IActionResult> ReportBug(Bug bug)
+        {
+            ApplicationUser user = await _userManager.GetUserAsync(HttpContext.User);
+            if (ValidateCategoryAndLevel(bug.Category, bug.Level)
+                && user.Id == bug.UserId)
+            {
+                if (bug.Report.Length > 1000)
+                {
+                    bug.Report = bug.Report.Substring(0, 1000);
+                }
+                _dbContext.Add(bug);
+                _dbContext.SaveChanges();
+                return Ok();
+            }
+            return BadRequest();
+        }
+        [HttpPost("/registeruserbyadmin")]
+        [Authorize]
+        public async Task<IActionResult> RegisterUserByAdmin(UserRegisteredByAdmin userRegisteredByAdmin)
+        {
+            ApplicationUser user = await _userManager.GetUserAsync(HttpContext.User);
+            List<string> roles = new List<string>(await _userManager.GetRolesAsync(user));
+            if(roles.Contains("Administrator"))
+            {
+                try
+                {
+                   IdentityResult result = await _userManager.CreateAsync(new ApplicationUser
+                    {
+                        UserName = userRegisteredByAdmin.username,
+                        Email = userRegisteredByAdmin.username + "@blocklygame.com"
+                    }, userRegisteredByAdmin.password);
+
+                    if (result.Succeeded)
+                    {
+                        return Ok();
+                    }
+                }
+                catch
+                {
+                    return BadRequest();
+                }
+               
+            }
+            return BadRequest();
+        }
+        
+        public class UserRegisteredByAdmin
+        {
+            public string username { get; set; }
+
+            public string password { get; set; }
         }
 
         private bool ValidateCategoryAndLevel(int category, int level)

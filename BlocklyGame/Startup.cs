@@ -88,6 +88,8 @@ namespace BlocklyGame
 
             services.AddLocalization(options => options.ResourcesPath = "Resources");
 
+            services.AddTransient<DataManager>();
+
             services.AddMvc()
                 .AddDataAnnotationsLocalization(options => {
                     options.DataAnnotationLocalizerProvider = (type, factory) =>

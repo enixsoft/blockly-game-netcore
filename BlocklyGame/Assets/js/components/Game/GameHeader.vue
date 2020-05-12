@@ -293,8 +293,8 @@ export default {
 			}
 			}
 
-			const data = {'username' : this.userName, 'category': this.category, 'level': this.level, 'level_start': level_start,
-				'task': task, 'task_start': task_start, 'task_end': task_end, 'task_elapsed_time': task_elapsed_time, 'rating': rating, 'code': code, 'result': result
+			const data = {'userId' : this.userId, 'category': Number(this.category), 'level': Number(this.level), 'level_start': level_start,
+				'task': Number(task), 'task_start': task_start, 'task_end': task_end, 'task_elapsed_time': Math.round(task_elapsed_time), 'rating': Number(rating), 'code': code, 'result': result
 			};
             
 			try {
@@ -414,7 +414,7 @@ export default {
 				return;
 			}
 
-			const data = {'username' : this.userName, 'category': this.category, 'level': this.level, 'report': report };
+			const data = {'userId' : this.userId, 'category': Number(this.category), 'level': Number(this.level), 'report': report };
 
 			try {
 				sendRequest({method:'POST', url: this.$global.Url('game/reportbug'), data});           
@@ -515,7 +515,7 @@ export default {
 
 			if(this.SAVING_ENABLED && this.isUserLoggedIn)
 			{									
-				const data = {'save' : this.saveObjectToString, 'user' : this.userName, 'category': this.category, 'level': this.level, 'progress': this.progress };				           
+				const data = {'save' : this.saveObjectToString, 'userId' : this.userId, 'category': Number(this.category), 'level': Number(this.level), 'progress':  Number(this.progress) };				           
 				try {
 					await sendRequest({method:'POST', url: this.$global.Url('game/savegame'), data});           
 				}
@@ -576,7 +576,7 @@ export default {
 
 			const progress = this.tasks[task].progress;
 			this.$emit('UPDATE_PROGRESS', {category: this.category, level: this.level, progress: this.progress});
-			const data = {'progress' : progress, 'user': this.userName, 'category': this.category, 'level': this.level }; 
+			const data = {'progress' : Number(progress), 'userId': this.userId, 'category': Number(this.category), 'level': Number(this.level) }; 
 			try {
 				await sendRequest({method:'POST', url: this.$global.Url('game/updateingameprogress'), data});           
 			}
@@ -657,6 +657,10 @@ export default {
 		userName()
 		{             
 			return this.$global.User ? this.$global.User.username : undefined;
+		},
+		userId()
+		{             
+			return this.$global.User ? this.$global.User.id : undefined;
 		}
 	},
 	watch: { 
