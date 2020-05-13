@@ -12,5 +12,7 @@ namespace BlocklyGame.Helpers
         public string GOOGLE_RECAPTCHA_KEY { get; set; }
 
         public string GOOGLE_RECAPTCHA_SECRET { get; set; }
+
+        public Dictionary<string, string> CountryCodeLocalization { get; set; }
     }
 }

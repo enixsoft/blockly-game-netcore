@@ -79,9 +79,13 @@ namespace BlocklyGame
 
             services.Configure<RequestLocalizationOptions>(options =>
             {
-                options.DefaultRequestCulture = new RequestCulture("en");
-                options.SupportedCultures = new List<CultureInfo> { new CultureInfo("en"), new CultureInfo("sk") };
-                options.SupportedUICultures = new List<CultureInfo> { new CultureInfo("en"), new CultureInfo("sk") };
+                Dictionary<string, string> localizations = Configuration.GetSection("AppSettings").GetSection("CountryCodeLocalization").GetChildren().ToDictionary(x => x.Key, x => x.Value);
+                options.DefaultRequestCulture = new RequestCulture(localizations["default"]);
+
+                List<CultureInfo> cultures = localizations.Values.Select(s => new CultureInfo(s)).Distinct().ToList();
+
+                options.SupportedCultures = cultures;
+                options.SupportedUICultures = cultures;
                 options.RequestCultureProviders.Clear();
                 options.RequestCultureProviders.Add(new LocalizationProvider());
             });

@@ -21,6 +21,7 @@ using Microsoft.Extensions.FileProviders;
 using System.IO;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity.UI.V3.Pages.Internal.Account.Manage;
+using Microsoft.AspNetCore.Http;
 //using BlocklyGame.Models;
 
 namespace BlocklyGame.Controllers
@@ -38,9 +39,9 @@ namespace BlocklyGame.Controllers
 
 
         public HomeController(
-            ILogger<HomeController> logger, 
-            ApplicationDbContext dbContext, 
-            IAntiforgery antiforgery, UserManager<ApplicationUser> userManager, 
+            ILogger<HomeController> logger,
+            ApplicationDbContext dbContext,
+            IAntiforgery antiforgery, UserManager<ApplicationUser> userManager,
             IStringLocalizer<SharedResource> localizer,
             IOptions<ApplicationSettings> appSettings,
             IWebHostEnvironment hostingEnvironment,
@@ -56,7 +57,7 @@ namespace BlocklyGame.Controllers
             _hostingEnvironment = hostingEnvironment;
             _dataManager = dataManager;
         }
-  
+
         public async Task<IActionResult> Index()
         {
             IndexModel indexModel = await _dataManager.CreateIndexModel(
@@ -77,6 +78,33 @@ namespace BlocklyGame.Controllers
 
             return View("Index", indexModel);
         }
+
+        [HttpGet("language/{lang}")]
+        public IActionResult Language(string lang)
+        {
+            if (!_appSettings.Value.CountryCodeLocalization.Values.Contains(lang))
+            {
+                lang = _appSettings.Value.CountryCodeLocalization["default"];
+            }
+
+            Response.Cookies.Append(
+                "lang",
+                lang,
+                new CookieOptions { Expires = DateTimeOffset.UtcNow.AddYears(1) }
+            );
+
+            bool requiresJsonResponse = HttpContext.Request.GetTypedHeaders()
+                                       .Accept.Any(t => t.Suffix.Value?.ToUpper() == "JSON"
+                                       || t.SubTypeWithoutSuffix.Value?.ToUpper() == "JSON");
+
+            if (requiresJsonResponse)
+            {
+                return Ok();
+            }
+
+            return RedirectToAction(nameof(HomeController.Index), "Home");
+        }
+
 
         //public IActionResult Privacy()
         //{

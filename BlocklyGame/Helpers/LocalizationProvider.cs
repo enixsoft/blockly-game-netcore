@@ -6,6 +6,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Localization;
+using System.Net.Http;
+using System.Text.Json;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace BlocklyGame.Helpers
 {
@@ -13,16 +17,50 @@ namespace BlocklyGame.Helpers
 	{
 		public override async Task<ProviderCultureResult> DetermineProviderCultureResult(HttpContext httpContext)
 		{
-			//Go away and do a bunch of work to find out what culture we should do. 	
+            IOptions<ApplicationSettings> applicationSettings = (IOptions<ApplicationSettings>) httpContext.RequestServices.GetService(typeof(IOptions<ApplicationSettings>));
+            ILogger<LocalizationProvider> logger = (ILogger <LocalizationProvider>) httpContext.RequestServices.GetService(typeof(ILogger<LocalizationProvider>));
+            IHttpClientFactory httpClientFactory = (IHttpClientFactory) httpContext.RequestServices.GetService(typeof(IHttpClientFactory));
+          
+            string cultureResult = applicationSettings.Value.CountryCodeLocalization["default"];
 
-			//Return a provider culture result. 
+            if (httpContext.Request.Cookies["lang"] != null && applicationSettings.Value.CountryCodeLocalization.Values.Contains(httpContext.Request.Cookies["lang"]))
+            {
+                return await Task.FromResult(new ProviderCultureResult(httpContext.Request.Cookies["lang"]));
+            }
 
-			return await Task.FromResult(new ProviderCultureResult("sk"));		
+            HttpClient httpClient = httpClientFactory.CreateClient();
 
-			//In the event I can't work out what culture I should use. Return null. 
-			//Code will fall to other providers in the list OR use the default. 
-			//return null;
-		}
+            try
+            {
+                string ipAddress = httpContext.Request.HttpContext.Connection.RemoteIpAddress.ToString();
+
+                HttpResponseMessage response = await httpClient.GetAsync($"http://ip-api.com/json/{ipAddress}?fields=status,message,countryCode,query");
+                response.EnsureSuccessStatusCode();
+
+                JsonDocument apiJson = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                if(apiJson.RootElement.GetProperty("status").GetString() == "success")
+                {
+                    string countryCode = apiJson.RootElement.GetProperty("countryCode").GetString();
+                    if(applicationSettings.Value.CountryCodeLocalization.ContainsKey(countryCode))
+                    {
+                        cultureResult = applicationSettings.Value.CountryCodeLocalization[countryCode];
+                    }        
+                }
+
+            }
+            catch(Exception ex)
+            {
+                logger.LogError(ex, "Unexpected error calling IP-API api."); 
+            }
+
+            httpContext.Response.Cookies.Append(
+                "lang",
+                cultureResult,
+                new CookieOptions { Expires = DateTimeOffset.UtcNow.AddYears(1) }
+            );
+
+            return await Task.FromResult(new ProviderCultureResult(cultureResult));
+        }
 
 
 	}

@@ -156,7 +156,46 @@ namespace BlocklyGame.Controllers
         {
             await _signInManager.SignOutAsync();
             return RedirectToAction(nameof(HomeController.Index), "Home");
-        }        
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize]
+        [Route("/registeruserbyadmin")]
+        public async Task<IActionResult> RegisterUserByAdmin(UserRegisteredByAdmin userRegisteredByAdmin)
+        {
+            ApplicationUser user = await _userManager.GetUserAsync(HttpContext.User);
+            List<string> roles = new List<string>(await _userManager.GetRolesAsync(user));
+            if (roles.Contains("Administrator"))
+            {
+                try
+                {
+                    IdentityResult result = await _userManager.CreateAsync(new ApplicationUser
+                    {
+                        UserName = userRegisteredByAdmin.username,
+                        Email = userRegisteredByAdmin.username + "@blocklygame.com"
+                    }, userRegisteredByAdmin.password);
+
+                    if (result.Succeeded)
+                    {
+                        return Ok();
+                    }
+                }
+                catch
+                {
+                    return BadRequest();
+                }
+
+            }
+            return BadRequest();
+        }
+
+        public class UserRegisteredByAdmin
+        {
+            public string username { get; set; }
+
+            public string password { get; set; }
+        }
 
         [HttpGet]
         public IActionResult AccessDenied()

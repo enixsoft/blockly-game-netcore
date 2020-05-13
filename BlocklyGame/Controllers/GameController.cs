@@ -206,9 +206,9 @@ namespace BlocklyGame.Controllers
             ApplicationUser user = await _userManager.GetUserAsync(HttpContext.User);
             if(ValidateCategoryAndLevel(savedGame.Category, savedGame.Level) 
                 && !String.IsNullOrEmpty(savedGame.Json) 
-                && savedGame.Progress >= 0 && savedGame.Progress <= 100
-                && user.Id == savedGame.UserId)
+                && savedGame.Progress >= 0 && savedGame.Progress <= 100)
             {
+                savedGame.UserId = user.Id;
                 _dbContext.Add(savedGame);
                 _dbContext.SaveChanges();
                 return Ok();
@@ -223,9 +223,9 @@ namespace BlocklyGame.Controllers
         {
             ApplicationUser user = await _userManager.GetUserAsync(HttpContext.User);
             if (ValidateCategoryAndLevel(progress.Category, progress.Level)
-                && progress.Percentage >= 0 && progress.Percentage <= 100
-                && user.Id == progress.UserId)
+                && progress.Percentage >= 0 && progress.Percentage <= 100)
             {
+                progress.UserId = user.Id;
                 Progress currentProgress = _dbContext.Progress
                                       .Where(p => p.UserId == user.Id && p.Category == progress.Category)
                                       .FirstOrDefault();
@@ -252,9 +252,9 @@ namespace BlocklyGame.Controllers
         public async Task<IActionResult> CreateLogOfGameplay(Gameplay gameplay)
         {
             ApplicationUser user = await _userManager.GetUserAsync(HttpContext.User);
-            if (ValidateCategoryAndLevel(gameplay.Category, gameplay.Level)  
-                && user.Id == gameplay.UserId)
+            if (ValidateCategoryAndLevel(gameplay.Category, gameplay.Level))
             {
+                gameplay.UserId = user.Id;
                 _dbContext.Add(gameplay);
                 _dbContext.SaveChanges();
                 return Ok();
@@ -267,54 +267,18 @@ namespace BlocklyGame.Controllers
         public async Task<IActionResult> ReportBug(Bug bug)
         {
             ApplicationUser user = await _userManager.GetUserAsync(HttpContext.User);
-            if (ValidateCategoryAndLevel(bug.Category, bug.Level)
-                && user.Id == bug.UserId)
+            if (ValidateCategoryAndLevel(bug.Category, bug.Level))
             {
                 if (bug.Report.Length > 1000)
                 {
                     bug.Report = bug.Report.Substring(0, 1000);
                 }
+                bug.UserId = user.Id;
                 _dbContext.Add(bug);
                 _dbContext.SaveChanges();
                 return Ok();
             }
             return BadRequest();
-        }
-        [HttpPost("/registeruserbyadmin")]
-        [Authorize]
-        public async Task<IActionResult> RegisterUserByAdmin(UserRegisteredByAdmin userRegisteredByAdmin)
-        {
-            ApplicationUser user = await _userManager.GetUserAsync(HttpContext.User);
-            List<string> roles = new List<string>(await _userManager.GetRolesAsync(user));
-            if(roles.Contains("Administrator"))
-            {
-                try
-                {
-                   IdentityResult result = await _userManager.CreateAsync(new ApplicationUser
-                    {
-                        UserName = userRegisteredByAdmin.username,
-                        Email = userRegisteredByAdmin.username + "@blocklygame.com"
-                    }, userRegisteredByAdmin.password);
-
-                    if (result.Succeeded)
-                    {
-                        return Ok();
-                    }
-                }
-                catch
-                {
-                    return BadRequest();
-                }
-               
-            }
-            return BadRequest();
-        }
-        
-        public class UserRegisteredByAdmin
-        {
-            public string username { get; set; }
-
-            public string password { get; set; }
         }
 
         private bool ValidateCategoryAndLevel(int category, int level)
