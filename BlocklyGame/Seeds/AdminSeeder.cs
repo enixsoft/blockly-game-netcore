@@ -1,7 +1,9 @@
+using BlocklyGame.Helpers;
 using BlocklyGame.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,12 +14,15 @@ public class AdminSeeder
     private readonly UserManager<ApplicationUser> userManager;
     private readonly RoleManager<IdentityRole> roleManager;
     private readonly ApplicationDbContext context;
+    private readonly IOptions<ApplicationSettings> appSettings;
 
-    public AdminSeeder(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, ApplicationDbContext context)
+
+    public AdminSeeder(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, ApplicationDbContext context, IOptions<ApplicationSettings> appSettings)
     {      
         this.userManager = userManager;
         this.roleManager = roleManager;
         this.context = context;
+        this.appSettings = appSettings;
     }
 
     public async Task Run()
@@ -38,7 +43,7 @@ public class AdminSeeder
             {
                 UserName = "admin",
                 Email = "admin@blocklygame.com"
-            }, "admin123");
+            }, appSettings.Value.AdminPassword);
 
             await userManager.AddToRoleAsync(userManager.FindByNameAsync("admin").Result, "Administrator");
         }

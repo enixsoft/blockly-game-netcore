@@ -7,9 +7,13 @@ using BlocklyGame.Controllers;
 using BlocklyGame.Helpers;
 using BlocklyGame.Managers;
 using BlocklyGame.Models;
+using kedzior.io.ConnectionStringConverter;
 using Localization;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
@@ -35,7 +39,24 @@ namespace BlocklyGame
             services.AddHttpClient();
 
             services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseMySql(Configuration.GetConnectionString("DefaultConnection")));
+            {
+                if(Configuration.GetSection("AppSettings").GetValue<bool>("MySQLDatabase"))
+                {
+                    string envConnectionString = Environment.GetEnvironmentVariable("MYSQLCONNSTR_localdb");
+                    if (!String.IsNullOrEmpty(envConnectionString))
+                    {
+                        options.UseMySql(AzureMySQL.ToMySQLStandard(envConnectionString));
+                    }
+                    else
+                    {
+                        options.UseMySql(Configuration.GetConnectionString("DefaultConnection"));
+                    }
+                }     
+                else
+                {
+                    options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"));
+                }
+            });
 
             services.AddIdentity<ApplicationUser, IdentityRole>()
                 .AddErrorDescriber<LocalizedIdentityErrorDescriber>()
@@ -66,16 +87,24 @@ namespace BlocklyGame
 
             services.AddTransient<AdminSeeder>();
 
-            //services.ConfigureApplicationCookie(options =>
-            //{
-            //    // Cookie settings
-            //    options.Cookie.HttpOnly = true;
-            //    options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+            services.ConfigureApplicationCookie(options =>
+            {
+                options.Events = new CookieAuthenticationEvents()
+                {
+                    OnRedirectToLogin = redirectContext =>
+                    {
+                        var uri = redirectContext.RedirectUri;
+                        UriHelper.FromAbsolute(uri, out var scheme, out var host, out var path, out var query, out var fragment);
+                        uri = UriHelper.BuildAbsolute(scheme, host, path, default, default, new FragmentString("#game"));
+                        redirectContext.Response.Redirect(uri);
+                        return Task.CompletedTask;
+                    }
+                };
 
-            //    options.LoginPath = "/Identity/Account/Login";
-            //    options.AccessDeniedPath = "/Identity/Account/AccessDenied";
-            //    options.SlidingExpiration = true;
-            //});
+                options.LoginPath = "/";
+                options.AccessDeniedPath = "/Account/AccessDenied";
+                options.SlidingExpiration = true;
+            });
 
             services.Configure<RequestLocalizationOptions>(options =>
             {
@@ -115,6 +144,14 @@ namespace BlocklyGame
                 // app.UseExceptionHandler("/Home/Error");
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
+            }
+
+            if (Configuration.GetSection("AppSettings").GetValue<bool>("MigrationsEnabled")) 
+            { 
+                using (var scope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope())
+                {
+                scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.Migrate();
+                }
             }
 
             //app.UseHttpsRedirection();

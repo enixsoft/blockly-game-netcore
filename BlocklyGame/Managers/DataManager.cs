@@ -52,6 +52,7 @@ namespace BlocklyGame.Managers
         {
             IndexModel indexModel = new IndexModel
             {
+                BaseUrl = _appSettings.Value.BaseURL,
                 CsrfToken = csrfToken,
                 Lang = await System.IO.File.ReadAllTextAsync(Path.Combine(_hostingEnvironment.ContentRootPath, $"Resources\\Game\\locales\\{lang}.json")),
                 Title = _localizer["title"],

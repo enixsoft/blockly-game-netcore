@@ -7,6 +7,8 @@ namespace BlocklyGame.Models
 {
     public class IndexModel
     {
+        public string BaseUrl { get; set; }
+
         public string CsrfToken { get; set; }
 
         public string Title { get; set; } = "Title";
