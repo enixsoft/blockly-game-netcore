@@ -60,15 +60,16 @@ namespace BlocklyGame.Controllers
                 {
                     return RedirectToAction(nameof(HomeController.Index), "Home");
                 }
-                else
-                {
-                    TempData["errors"] = JsonSerializer.Serialize(new Dictionary<string, List<string>>() { { "username", new List<string> () { _localizer["These credentials do not match our records."] } } });
-                    return RedirectToAction(nameof(HomeController.Index), "Home");
-                }
+
             }
 
+            TempData["old"] = GetOldInputs(ModelState
+                .ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.RawValue?.ToString()
+                ));
             TempData["errors"] = JsonSerializer.Serialize(new Dictionary<string, List<string>>() { { "username", new List<string>() { _localizer["These credentials do not match our records."] } } });
-            return RedirectToAction(nameof(HomeController.Index), "Home");
+            return RedirectToAction(nameof(HomeController.Index), "Home");            
         }
 
         [HttpPost]
@@ -219,7 +220,7 @@ namespace BlocklyGame.Controllers
 
         private string GetOldInputs(Dictionary<string, string> oldInputs)
         {
-            string[] filteredFields = { "register-password", "register-password_confirmation"};
+            string[] filteredFields = { "login-password", "password", "register-password", "register-password_confirmation"};
             oldInputs = oldInputs.Where(kvp => !filteredFields.Contains(kvp.Key)).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
             return JsonSerializer.Serialize(oldInputs);

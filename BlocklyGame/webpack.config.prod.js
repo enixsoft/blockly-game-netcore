@@ -17,7 +17,13 @@ module.exports = merge(baseConfig, {
     optimization: {
         minimizer: [
             new OptimizeCssAssetsPlugin(),
-            new TerserPlugin()
+            new TerserPlugin({
+                terserOptions: {
+                    compress: {
+                      drop_console: true,
+                    }
+                }
+            })
         ]
     },
     plugins: [

@@ -23,7 +23,7 @@
 </div>
 <div class="col-md-6 mx-auto">
     <label class="fancy-checkbox">
-    <input type="checkbox" id="remember" name="remember" :checked="oldRemember" />
+    <input type="checkbox" id="remember" name="remember" :checked="oldRemember" value="true"/>
     <i class="fa fa-fw fa-square unchecked"></i>
     <i class="fa fa-fw fa-check-square checked"></i> {{ locales.remember }}
     </label>

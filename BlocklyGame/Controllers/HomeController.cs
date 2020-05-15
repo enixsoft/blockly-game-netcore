@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using BlocklyGame.Models;
@@ -9,20 +7,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Identity;
-using System.Text.Json;
-using Newtonsoft.Json;
 using Microsoft.Extensions.Localization;
 using BlocklyGame.Managers;
 using Localization;
 using BlocklyGame.Helpers;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Localization;
-using Microsoft.Extensions.FileProviders;
-using System.IO;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Identity.UI.V3.Pages.Internal.Account.Manage;
 using Microsoft.AspNetCore.Http;
-//using BlocklyGame.Models;
 
 namespace BlocklyGame.Controllers
 {

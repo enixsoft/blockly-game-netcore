@@ -4,7 +4,7 @@
 <div class="row h-100 w-100 no-padding">
     <div v-if="isUserLoggedIn" class="col-lg-6 no-padding">
         <iframe id="app-frame" class="game-playcanvas" ref="iframe"  
-        :src="this.$global.Url(`game/playcanvas/${levelString}.html`)"></iframe> 
+        :src="this.$global.Url(`game/playcanvas/${levelString}.html?target=${target}`)"></iframe> 
         <!-- src="https://playcanv.as/e/p/62c28f63/"></iframe>-->             
     </div>
     <div v-if="isUserLoggedIn" class="col-lg-6 no-padding">
@@ -125,7 +125,7 @@ export default {
 					toolbox: this.toolbox, trashcan: true, scrollbars: true
 				}),
 			{
-				player: this.runCode.bind(null, true)
+				player: this.runCode.bind(null, this.$global.User.role==='admin')
 			}
 		);
 		if(this.$global.Mobile)
@@ -655,6 +655,10 @@ export default {
 		isUserLoggedIn()
 		{
 			return this.$global.User ? true : false;
+		},
+		target()
+		{
+			return window.location.origin;
 		}
 	},
 	watch: { 
