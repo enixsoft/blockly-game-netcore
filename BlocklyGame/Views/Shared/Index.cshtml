@@ -38,26 +38,6 @@
     <environment names="Production">
         <script asp-src-include="dist/app.*.bundle.js"></script>
     </environment>
-    <script src="https://www.google.com/recaptcha/api.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.js"></script>
-    <script>
-   window.addEventListener("load", function(){
-   window.cookieconsent.initialise({
-      "palette": {
-         "popup": {
-         "background": "#242c34"
-         },
-         "button": {
-         "background": "#d4282a"
-         }
-      },
-      "theme": "classic",
-      "content": {
-         "message": "@Model.Cookies["msg"]",
-         "dismiss": "@Model.Cookies["dismiss"]",
-         "link": "@Model.Cookies["link"]"
-      }
-   })});
-    </script>
+    <script src="https://www.google.com/recaptcha/api.js"></script>   
 </body>
 </html>

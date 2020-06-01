@@ -117,15 +117,6 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="cookies.dismiss" xml:space="preserve">
-    <value>I understand</value>
-  </data>
-  <data name="cookies.link" xml:space="preserve">
-    <value>Learn more</value>
-  </data>
-  <data name="cookies.msg" xml:space="preserve">
-    <value>THIS WEB PAGE USES COOKIES. BY BROWSING THIS SITE, YOU AGREE TO USE THEM.</value>
-  </data>
   <data name="title" xml:space="preserve">
     <value>Blockly Game</value>
   </data>

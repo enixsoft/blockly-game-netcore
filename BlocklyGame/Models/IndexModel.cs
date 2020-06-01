@@ -26,7 +26,5 @@ namespace BlocklyGame.Models
         public string InGameProgress { get; set; } = "[]";
 
         public string GameData { get; set; } = "[]";
-
-        public Dictionary<string, string> Cookies { get; set; } = new Dictionary<string, string>();   
     }
 }

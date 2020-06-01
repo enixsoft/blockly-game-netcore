@@ -117,15 +117,6 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="cookies.dismiss" xml:space="preserve">
-    <value>Rozumiem</value>
-  </data>
-  <data name="cookies.link" xml:space="preserve">
-    <value>Viac informácií</value>
-  </data>
-  <data name="cookies.msg" xml:space="preserve">
-    <value>TÁTO WEBOVÁ STRÁNKA POUŽÍVA SÚBORY COOKIES. PREHLIADANÍM VYJADRUJETE SÚHLAS S ICH POUŽÍVANÍM.</value>
-  </data>
   <data name="Email '{0}' is already taken." xml:space="preserve">
     <value>E-mail '{0}' už existuje.</value>
   </data>

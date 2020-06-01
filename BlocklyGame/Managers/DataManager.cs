@@ -58,9 +58,6 @@ namespace BlocklyGame.Managers
                 Title = _localizer["title"],
                 RecaptchaKey = _appSettings.Value.GOOGLE_RECAPTCHA_KEY
             };
-            indexModel.Cookies.Add("msg", _localizer["cookies.msg"]);
-            indexModel.Cookies.Add("dismiss", _localizer["cookies.dismiss"]);
-            indexModel.Cookies.Add("link", _localizer["cookies.link"]);
 
             if (user != null)
             {
